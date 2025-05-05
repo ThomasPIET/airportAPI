@@ -1,0 +1,962 @@
+openapi: 3.0.3
+info:
+  title: Toulouse Airport API
+  description: |
+    REST API pour la gestion des vols nationaux au départ de l'aéroport de Toulouse.
+    Elle couvre l'authentification, les vols, la flotte, le personnel, les passagers,
+    les réservations et les pistes.
+  version: "1.0.0"
+servers:
+  - url: https://localhost:8080/api/v1
+    description: Environnement de développement local
+security: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Authentification via JSON Web Token. Inclure le header
+        `Authorization: Bearer <token>`. Le token expire après 1 h.
+  schemas:
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+    FlightStatus:
+      type: string
+      enum:
+        - ON_TIME
+        - DELAYED
+        - CANCELLED
+        - LANDED
+    Flight:
+      type: object
+      required:
+        - flightNumber
+        - destination
+        - departureTime
+        - arrivalTime
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+        flightNumber:
+          type: string
+          example: TO1234
+        destination:
+          type: string
+          example: Paris
+        gate:
+          type: string
+          example: A12
+        departureTime:
+          type: string
+          format: date-time
+        arrivalTime:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/FlightStatus'
+        planeId:
+          type: integer
+          nullable: true
+        crewIds:
+          type: array
+          items:
+            type: integer
+        capacity:
+          type: integer
+          readOnly: true
+    PlaneState:
+      type: string
+      enum:
+        - ACTIVE
+        - MAINTENANCE
+        - GROUNDED
+    Plane:
+      type: object
+      required:
+        - registration
+        - model
+        - capacity
+        - state
+      properties:
+        id:
+          type: integer
+          format: int64
+        registration:
+          type: string
+          example: F-HBLA
+        model:
+          type: string
+          example: Airbus A320
+        capacity:
+          type: integer
+        state:
+          $ref: '#/components/schemas/PlaneState'
+    Role:
+      type: string
+      enum:
+        - USER
+        - STAFF
+        - ADMIN
+    StaffAvailability:
+      type: string
+      enum:
+        - AVAILABLE
+        - UNAVAILABLE
+    Staff:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - role
+        - availability
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          example: pilot
+        availability:
+          $ref: '#/components/schemas/StaffAvailability'
+    Passenger:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - dateOfBirth
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+    Booking:
+      type: object
+      required:
+        - flightId
+        - passengerId
+        - seat
+      properties:
+        id:
+          type: integer
+        flightId:
+          type: integer
+        passengerId:
+          type: integer
+        seat:
+          type: string
+          example: 12A
+    Runway:
+      type: object
+      required:
+        - identifier
+        - available
+      properties:
+        id:
+          type: integer
+        identifier:
+          type: string
+          example: A
+        available:
+          type: boolean
+        maintenanceFrom:
+          type: string
+          format: date-time
+          nullable: true
+        maintenanceTo:
+          type: string
+          format: date-time
+          nullable: true
+  parameters:
+    flightId:
+      name: flightId
+      in: path
+      required: true
+      schema:
+        type: integer
+    planeId:
+      name: planeId
+      in: path
+      required: true
+      schema:
+        type: integer
+    staffId:
+      name: staffId
+      in: path
+      required: true
+      schema:
+        type: integer
+    passengerId:
+      name: passengerId
+      in: path
+      required: true
+      schema:
+        type: integer
+    bookingId:
+      name: bookingId
+      in: path
+      required: true
+      schema:
+        type: integer
+    runwayId:
+      name: runwayId
+      in: path
+      required: true
+      schema:
+        type: integer
+paths:
+  /users/register:
+    post:
+      tags:
+        - Users
+      summary: Créer un nouveau compte utilisateur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                role:
+                  $ref: '#/components/schemas/Role'
+      responses:
+        '201':
+          description: Compte créé
+          headers:
+            Location:
+              description: URI du nouvel utilisateur
+              schema:
+                type: string
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/login:
+    post:
+      tags:
+        - Users
+      summary: Authentification et obtention d'un JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '200':
+          description: Jeton JWT retourné
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: Identifiants invalides
+  /flights:
+    get:
+      tags:
+        - Flights
+      summary: Liste des vols
+      security: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/FlightStatus'
+        - name: destination
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste paginée des vols
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Flight'
+    post:
+      tags:
+        - Flights
+      summary: Créer un vol
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Flight'
+      responses:
+        '201':
+          description: Vol créé
+          headers:
+            Location:
+              schema:
+                type: string
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /flights/{flightId}:
+    get:
+      tags:
+        - Flights
+      summary: Détails d'un vol
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      responses:
+        '200':
+          description: Détails du vol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flight'
+        '404':
+          description: Vol introuvable
+    put:
+      tags:
+        - Flights
+      summary: Mise à jour complète d'un vol
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Flight'
+      responses:
+        '200':
+          description: Vol mis à jour
+    patch:
+      tags:
+        - Flights
+      summary: Mise à jour partielle d'un vol
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Attributs à modifier
+      responses:
+        '200':
+          description: Vol mis à jour
+    delete:
+      tags:
+        - Flights
+      summary: Suppression ou annulation logique d'un vol
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      responses:
+        '204':
+          description: Vol supprimé
+  /flights/{flightId}/plane:
+    post:
+      tags:
+        - Flights
+      summary: Assignation d'un avion à un vol
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - planeId
+              properties:
+                planeId:
+                  type: integer
+      responses:
+        '204':
+          description: Avion assigné
+    delete:
+      tags:
+        - Flights
+      summary: Désassignation de l'avion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      responses:
+        '204':
+          description: Avion retiré
+  /flights/{flightId}/crew:
+    post:
+      tags:
+        - Flights
+      summary: Assignation d'équipage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - crewIds
+              properties:
+                crewIds:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '204':
+          description: Équipage assigné
+  /flights/{flightId}/crew/{staffId}:
+    delete:
+      tags:
+        - Flights
+      summary: Retrait d'un membre d'équipage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+        - $ref: '#/components/parameters/staffId'
+      responses:
+        '204':
+          description: Membre retiré
+  /flights/{flightId}/status:
+    patch:
+      tags:
+        - Flights
+      summary: Mise à jour du statut d'un vol
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  $ref: '#/components/schemas/FlightStatus'
+      responses:
+        '204':
+          description: Statut mis à jour
+  /flights/{flightId}/bookings:
+    post:
+      tags:
+        - Passengers
+      summary: Réserver un billet
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - passengerId
+                - seat
+              properties:
+                passengerId:
+                  type: integer
+                seat:
+                  type: string
+      responses:
+        '201':
+          description: Réservation créée
+          headers:
+            Location:
+              schema:
+                type: string
+        '400':
+          description: Capacité dépassée ou double réservation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags:
+        - Passengers
+      summary: Liste des réservations d'un vol
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+      responses:
+        '200':
+          description: Liste des réservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+  /flights/{flightId}/bookings/{bookingId}:
+    delete:
+      tags:
+        - Passengers
+      summary: Annulation de réservation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flightId'
+        - $ref: '#/components/parameters/bookingId'
+      responses:
+        '204':
+          description: Réservation annulée
+  /planes:
+    get:
+      tags:
+        - Planes
+      summary: Liste des avions
+      security: []
+      responses:
+        '200':
+          description: Liste des avions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plane'
+    post:
+      tags:
+        - Planes
+      summary: Ajout d'un avion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plane'
+      responses:
+        '201':
+          description: Avion créé
+  /planes/{planeId}:
+    get:
+      tags:
+        - Planes
+      summary: Détail d'un avion
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/planeId'
+      responses:
+        '200':
+          description: Détail de l'avion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plane'
+    put:
+      tags:
+        - Planes
+      summary: Mise à jour complète d'un avion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/planeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plane'
+      responses:
+        '200':
+          description: Avion mis à jour
+    patch:
+      tags:
+        - Planes
+      summary: Mise à jour partielle d'un avion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/planeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Avion mis à jour
+    delete:
+      tags:
+        - Planes
+      summary: Retrait de la flotte
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/planeId'
+      responses:
+        '204':
+          description: Avion supprimé
+  /personnel:
+    get:
+      tags:
+        - Personnel
+      summary: Liste du personnel
+      security: []
+      responses:
+        '200':
+          description: Liste du personnel
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Staff'
+    post:
+      tags:
+        - Personnel
+      summary: Enregistrement d'un nouveau membre du personnel
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Staff'
+      responses:
+        '201':
+          description: Personnel créé
+  /personnel/{staffId}:
+    get:
+      tags:
+        - Personnel
+      summary: Profil d'un membre du personnel
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/staffId'
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+    put:
+      tags:
+        - Personnel
+      summary: Mise à jour complète d'un membre du personnel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/staffId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Staff'
+      responses:
+        '200':
+          description: Membre mis à jour
+    patch:
+      tags:
+        - Personnel
+      summary: Mise à jour partielle d'un membre du personnel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/staffId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Membre mis à jour
+    delete:
+      tags:
+        - Personnel
+      summary: Suppression d'un membre du personnel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/staffId'
+      responses:
+        '204':
+          description: Membre supprimé
+  /personnel/{staffId}/availability:
+    patch:
+      tags:
+        - Personnel
+      summary: Basculer la disponibilité du personnel
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/staffId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - availability
+              properties:
+                availability:
+                  $ref: '#/components/schemas/StaffAvailability'
+      responses:
+        '204':
+          description: Disponibilité mise à jour
+  /passengers:
+    get:
+      tags:
+        - Passengers
+      summary: Liste des passagers
+      security: []
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Passenger'
+    post:
+      tags:
+        - Passengers
+      summary: Création d'un passager
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Passenger'
+      responses:
+        '201':
+          description: Passager créé
+  /passengers/{passengerId}:
+    get:
+      tags:
+        - Passengers
+      summary: Détail d'un passager
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/passengerId'
+      responses:
+        '200':
+          description: Détail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Passenger'
+    put:
+      tags:
+        - Passengers
+      summary: Mise à jour complète d'un passager
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/passengerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Passenger'
+      responses:
+        '200':
+          description: Passager mis à jour
+    patch:
+      tags:
+        - Passengers
+      summary: Mise à jour partielle d'un passager
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/passengerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Passager mis à jour
+    delete:
+      tags:
+        - Passengers
+      summary: Suppression d'un passager
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/passengerId'
+      responses:
+        '204':
+          description: Passager supprimé
+  /runways:
+    get:
+      tags:
+        - Runways
+      summary: Liste des pistes
+      security: []
+      responses:
+        '200':
+          description: Liste des pistes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Runway'
+    post:
+      tags:
+        - Runways
+      summary: Ajout d'une piste
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Runway'
+      responses:
+        '201':
+          description: Piste créée
+  /runways/{runwayId}:
+    get:
+      tags:
+        - Runways
+      summary: Détail d'une piste
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/runwayId'
+      responses:
+        '200':
+          description: Détail de la piste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Runway'
+    put:
+      tags:
+        - Runways
+      summary: Mise à jour complète d'une piste
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/runwayId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Runway'
+      responses:
+        '200':
+          description: Piste mise à jour
+    patch:
+      tags:
+        - Runways
+      summary: Mise à jour partielle d'une piste
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/runwayId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Piste mise à jour
+    delete:
+      tags:
+        - Runways
+      summary: Suppression d'une piste
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/runwayId'
+      responses:
+        '204':
+          description: Piste supprimée

@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum FlightStatus {
+  ON_TIME
+  DELAYED
+  CANCELLED
+  LANDED
+}
+
+enum PlaneState {
+  ACTIVE
+  MAINTENANCE
+  GROUNDED
+}
+
+enum Role {
+  USER
+  STAFF
+  ADMIN
+}
+
+enum StaffAvailability {
+  AVAILABLE
+  UNAVAILABLE
+}
+
+model Flight {
+  id              Int           @id @default(autoincrement())
+  flightNumber    String
+  destination     String
+  gate            String?
+  departureTime   DateTime
+  arrivalTime     DateTime
+  status          FlightStatus
+  capacity        Int           @default(0)
+  planeId         Int?
+  plane           Plane?        @relation(fields: [planeId], references: [id])
+  crewAssignments StaffFlight[]
+  bookings        Booking[]
+}
+
+model Plane {
+  id           Int        @id @default(autoincrement())
+  registration String
+  model        String
+  capacity     Int
+  state        PlaneState
+  flights      Flight[]
+}
+
+model Staff {
+  id              Int               @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  role            Role
+  availability    StaffAvailability
+  crewAssignments StaffFlight[]
+}
+
+model Passenger {
+  id          Int       @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  bookings    Booking[]
+}
+
+model Booking {
+  id          Int    @id @default(autoincrement())
+  flightId    Int
+  passengerId Int
+  seat        String
+
+  flight    Flight    @relation(fields: [flightId], references: [id])
+  passenger Passenger @relation(fields: [passengerId], references: [id])
+}
+
+model Runway {
+  id              Int       @id @default(autoincrement())
+  identifier      String
+  available       Boolean
+  maintenanceFrom DateTime?
+  maintenanceTo   DateTime?
+}
+
+/// Table de liaison pour la relation plusieurs-à-plusieurs entre Flight et Staff
+model StaffFlight {
+  flightId Int
+  staffId  Int
+
+  flight Flight @relation(fields: [flightId], references: [id])
+  staff  Staff  @relation(fields: [staffId], references: [id])
+
+  @@id([flightId, staffId])
+}
