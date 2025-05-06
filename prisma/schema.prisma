@@ -21,14 +21,21 @@ enum PlaneState {
 }
 
 enum Role {
-  USER
-  STAFF
-  ADMIN
+  PILOT
+  CABIN
 }
 
 enum StaffAvailability {
   AVAILABLE
   UNAVAILABLE
+}
+
+model Admin {
+  id        Int    @id @default(autoincrement())
+  firstName String
+  lastName  String
+  email     String
+  password  String
 }
 
 model Flight {
@@ -59,6 +66,7 @@ model Staff {
   id              Int               @id @default(autoincrement())
   firstName       String
   lastName        String
+  email           String
   role            Role
   availability    StaffAvailability
   crewAssignments StaffFlight[]
@@ -73,13 +81,12 @@ model Passenger {
 }
 
 model Booking {
-  id          Int    @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   flightId    Int
   passengerId Int
   seat        String
-
-  flight    Flight    @relation(fields: [flightId], references: [id])
-  passenger Passenger @relation(fields: [passengerId], references: [id])
+  flight      Flight    @relation(fields: [flightId], references: [id])
+  passenger   Passenger @relation(fields: [passengerId], references: [id])
 }
 
 model Runway {

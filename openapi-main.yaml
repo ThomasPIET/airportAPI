@@ -3,11 +3,11 @@ info:
   title: Toulouse Airport API
   description: |
     REST API pour la gestion des vols nationaux au départ de l'aéroport de Toulouse.
-    Elle couvre l'authentification, les vols, la flotte, le personnel, les passagers,
+    Elle couvre l'authentification, les vols, la flotte, le staff, les passagers,
     les réservations et les pistes.
   version: "1.0.0"
 servers:
-  - url: https://localhost:8080/api/v1
+  - url: http://localhost:3000/api/v1
     description: Environnement de développement local
 security: []
 components:
@@ -103,12 +103,31 @@ components:
           type: integer
         state:
           $ref: '#/components/schemas/PlaneState'
+    Admin:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string    
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
     Role:
       type: string
       enum:
-        - USER
-        - STAFF
-        - ADMIN
+        - PILOT
+        - CABIN
     StaffAvailability:
       type: string
       enum:
@@ -119,6 +138,8 @@ components:
       required:
         - firstName
         - lastName
+        - email
+        - password
         - role
         - availability
       properties:
@@ -128,9 +149,15 @@ components:
           type: string
         lastName:
           type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
         role:
           type: string
-          example: pilot
+          example: PILOT
         availability:
           $ref: '#/components/schemas/StaffAvailability'
     Passenger:
@@ -224,81 +251,6 @@ components:
       schema:
         type: integer
 paths:
-  /users/register:
-    post:
-      tags:
-        - Users
-      summary: Créer un nouveau compte utilisateur
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-                - password
-                - role
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-                  minLength: 8
-                role:
-                  $ref: '#/components/schemas/Role'
-      responses:
-        '201':
-          description: Compte créé
-          headers:
-            Location:
-              description: URI du nouvel utilisateur
-              schema:
-                type: string
-        '400':
-          description: Requête invalide
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /users/login:
-    post:
-      tags:
-        - Users
-      summary: Authentification et obtention d'un JWT
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-                - password
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-                  minLength: 8
-      responses:
-        '200':
-          description: Jeton JWT retourné
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-        '401':
-          description: Identifiants invalides
   /flights:
     get:
       tags:
@@ -667,15 +619,15 @@ paths:
       responses:
         '204':
           description: Avion supprimé
-  /personnel:
+  /staff:
     get:
       tags:
-        - Personnel
-      summary: Liste du personnel
+        - Staff
+      summary: Liste du staff
       security: []
       responses:
         '200':
-          description: Liste du personnel
+          description: Liste du staff
           content:
             application/json:
               schema:
@@ -684,10 +636,9 @@ paths:
                   $ref: '#/components/schemas/Staff'
     post:
       tags:
-        - Personnel
-      summary: Enregistrement d'un nouveau membre du personnel
-      security:
-        - bearerAuth: []
+        - Staff
+      summary: Enregistrement d'un nouveau membre du staff
+      security: []
       requestBody:
         required: true
         content:
@@ -696,12 +647,12 @@ paths:
               $ref: '#/components/schemas/Staff'
       responses:
         '201':
-          description: Personnel créé
-  /personnel/{staffId}:
+          description: staff créé
+  /staff/{staffId}:
     get:
       tags:
-        - Personnel
-      summary: Profil d'un membre du personnel
+        - Staff
+      summary: Profil d'un membre du staff
       security: []
       parameters:
         - $ref: '#/components/parameters/staffId'
@@ -714,8 +665,8 @@ paths:
                 $ref: '#/components/schemas/Staff'
     put:
       tags:
-        - Personnel
-      summary: Mise à jour complète d'un membre du personnel
+        - Staff
+      summary: Mise à jour complète d'un membre du staff
       security:
         - bearerAuth: []
       parameters:
@@ -731,8 +682,8 @@ paths:
           description: Membre mis à jour
     patch:
       tags:
-        - Personnel
-      summary: Mise à jour partielle d'un membre du personnel
+        - Staff
+      summary: Mise à jour partielle d'un membre du staff
       security:
         - bearerAuth: []
       parameters:
@@ -748,8 +699,8 @@ paths:
           description: Membre mis à jour
     delete:
       tags:
-        - Personnel
-      summary: Suppression d'un membre du personnel
+        - Staff
+      summary: Suppression d'un membre du staff
       security:
         - bearerAuth: []
       parameters:
@@ -757,11 +708,11 @@ paths:
       responses:
         '204':
           description: Membre supprimé
-  /personnel/{staffId}/availability:
+  /staff/{staffId}/availability:
     patch:
       tags:
-        - Personnel
-      summary: Basculer la disponibilité du personnel
+        - Staff
+      summary: Basculer la disponibilité du staff
       security:
         - bearerAuth: []
       parameters:

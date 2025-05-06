@@ -1,5 +1,6 @@
 import express from "express";
-import usersRouter from "./routers/users.router.js";
+import staffRouter from "./routers/staff.router.js";
+import adminRouter from "./routers/admin.router.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import OpenApiValidator from "express-openapi-validator";
 import swaggerUi from "swagger-ui-express";
@@ -20,7 +21,8 @@ app.use(
   })
 );
 
-app.use(v1 + "/users", usersRouter);
+app.use(v1 + "/staff", staffRouter);
+app.use(v1 + "/admin", adminRouter);
 
 // Use a global customized error middleware
 app.use(errorMiddleware);
