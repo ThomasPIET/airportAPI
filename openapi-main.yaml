@@ -137,7 +137,6 @@ components:
         - firstName
         - lastName
         - email
-        - password
         - role
         - availability
       properties:
@@ -150,9 +149,6 @@ components:
         email:
           type: string
           format: email
-        password:
-          type: string
-          format: password
         role:
           type: string
           example: PILOT

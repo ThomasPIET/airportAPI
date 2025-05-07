@@ -37,3 +37,19 @@ export const addStaff = async (staff) => {
     },
   });
 };
+
+export const getStaffMember = async (id) => {
+  return await prisma.staff.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      availability: true,
+    },
+  });
+};
