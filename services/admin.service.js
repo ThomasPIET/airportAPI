@@ -10,7 +10,6 @@ export const addAdmin = async (admin) => {
   });
 
   if (existing) {
-    console.log("Email already exists");
     const error = new Error("Email already exists");
     error.code = "EMAIL_EXISTS";
     throw error;
@@ -34,17 +33,19 @@ export const addAdmin = async (admin) => {
 };
 
 export const login = async (email, password) => {
-  const user = await prisma.admin.findFirst({
+  const admin = await prisma.admin.findFirst({
     where: {
       email,
     },
   });
 
-  if (!user) throw new Error("admin not found");
+  console.log("user", admin);
+
+  if (!admin) throw new Error("Admin not found or invalid password");
 
   // Not safe to returns this to end admin
   if (!bcrypt.compareSync(password, admin.password))
-    throw new Error("Invalid password");
+    throw new Error("Admin not found or invalid password");
 
   // Generate a token here
   return jwt.sign(

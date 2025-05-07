@@ -1,7 +1,7 @@
 import { getAll, addStaff } from "../services/staff.service.js";
 
-export const getAllStaff = async (res) => {
-  res.status(201).json({
+export const getAllStaff = async (req, res) => {
+  return res.status(201).json({
     success: true,
     staff: await getAll(),
   });

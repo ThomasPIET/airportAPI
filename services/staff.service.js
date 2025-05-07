@@ -1,6 +1,4 @@
 import prisma from "../db.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 
 export const getAll = async () => {
   return await prisma.staff.findMany({

@@ -111,8 +111,6 @@ components:
         - email
         - password
       properties:
-        id:
-          type: integer
         firstName:
           type: string    
         lastName:
@@ -251,6 +249,55 @@ components:
       schema:
         type: integer
 paths:
+  /admin/register:
+    post:
+      tags:
+        - Admin
+      summary: Création d'un nouvel administrateur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Admin'
+      responses:
+        '201':
+          description: Administrateur créé
+  /admin/login:
+    post:
+      tags:
+        - Admin
+      summary: Authentification d'un administrateur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Authentification réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string    
+
+
   /flights:
     get:
       tags:
