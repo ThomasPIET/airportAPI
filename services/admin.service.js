@@ -39,8 +39,6 @@ export const login = async (email, password) => {
     },
   });
 
-  console.log("user", admin);
-
   if (!admin) throw new Error("Admin not found or invalid password");
 
   // Not safe to returns this to end admin
