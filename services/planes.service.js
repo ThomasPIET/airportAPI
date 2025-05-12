@@ -23,3 +23,15 @@ export const getAllPlanesServices = async () => {
 
   return planes;
 };
+
+export const getPlaneByIdServices = async (id) => {
+  const plane = await prisma.plane.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+  });
+
+  if (!plane) throw new Error("Plane not found");
+
+  return plane;
+};
