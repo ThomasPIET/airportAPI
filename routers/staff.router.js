@@ -11,8 +11,6 @@ const router = express.Router();
 // Protected routes
 router.get("/", authMiddleware, getAllStaff);
 router.get("/:id", authMiddleware, getStaffById);
-
-// Public routes
-router.post("/", createStaff);
+router.post("/", authMiddleware, createStaff);
 
 export default router;

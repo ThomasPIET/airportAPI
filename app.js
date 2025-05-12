@@ -8,6 +8,7 @@ import YAML from "yamljs";
 import staffRouter from "./routers/staff.router.js";
 import adminRouter from "./routers/admin.router.js";
 import flightsRouter from "./routers/flights.router.js";
+import planesRouter from "./routers/planes.router.js";
 
 const app = express();
 app.use(express.json());
@@ -26,6 +27,7 @@ app.use(
 app.use(v1 + "/staff", staffRouter);
 app.use(v1 + "/admin", adminRouter);
 app.use(v1 + "/flights", flightsRouter);
+app.use(v1 + "/planes", planesRouter);
 
 // Use a global customized error middleware
 app.use(errorMiddleware);
