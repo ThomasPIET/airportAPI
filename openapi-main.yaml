@@ -186,8 +186,6 @@ components:
         - identifier
         - available
       properties:
-        id:
-          type: integer
         identifier:
           type: string
           example: A
