@@ -1,4 +1,8 @@
-import { addFlight, getFlights } from "../services/flights.service.js";
+import {
+  addFlight,
+  getFlights,
+  flightById,
+} from "../services/flights.service.js";
 
 export const createFlight = async (req, res) => {
   console.log("Creating flight");
@@ -53,6 +57,34 @@ export const getAllFlights = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Error fetching flights",
+      error: error.message,
+    });
+  }
+};
+
+export const getFlightById = async (req, res) => {
+  const { id } = req.params;
+
+  if (isNaN(id)) {
+    return res.status(400).json({
+      message: "Invalid flight ID",
+    });
+  }
+  try {
+    const flight = await flightById(id);
+    if (!flight) {
+      return res.status(404).json({
+        message: "Flight not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Flight fetched successfully",
+      flight,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching flight",
       error: error.message,
     });
   }

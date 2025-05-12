@@ -25,3 +25,15 @@ export const getFlights = async () => {
     },
   });
 };
+
+export const flightById = async (id) => {
+  return await prisma.flight.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+    include: {
+      plane: true,
+      crewAssignments: true,
+    },
+  });
+};
