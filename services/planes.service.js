@@ -15,3 +15,11 @@ export const addPlane = async (plane) => {
     },
   });
 };
+
+export const getAllPlanesServices = async () => {
+  const planes = await prisma.plane.findMany();
+
+  if (!planes) throw new Error("No planes found");
+
+  return planes;
+};
