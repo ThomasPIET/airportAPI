@@ -155,8 +155,6 @@ components:
         - lastName
         - dateOfBirth
       properties:
-        id:
-          type: integer
         firstName:
           type: string
         lastName:
