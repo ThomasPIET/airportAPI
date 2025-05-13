@@ -62,5 +62,10 @@ export const getPassengersById = async (req, res) => {
       message: "Passenger fetched successfully",
       passenger,
     });
-  } catch (error) {}
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching passenger",
+      error: error.message,
+    });
+  }
 };
