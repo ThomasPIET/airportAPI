@@ -9,12 +9,27 @@ export const addFlight = async (flight) => {
 
   if (existing) throw new Error("Flight already exists");
 
-  return await prisma.flight.create({
-    data: {
-      ...flight,
-      status: "ON_TIME",
-    },
-  });
+  const { planeId, ...flightData } = flight;
+
+  try {
+    return await prisma.flight.create({
+      data: {
+        ...flightData,
+        status: "ON_TIME",
+        plane: {
+          connect: {
+            id: planeId,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    if (error.code === "P2025") {
+      throw new Error("Plane not found");
+    }
+
+    throw new Error("Error creating flight");
+  }
 };
 
 export const getFlights = async () => {

@@ -9,8 +9,10 @@ import authMiddleware from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
 // Protected routes
-router.get("/", authMiddleware, getAllStaff);
-router.get("/:id", authMiddleware, getStaffById);
 router.post("/", authMiddleware, createStaff);
+
+// Public routes
+router.get("/", getAllStaff);
+router.get("/:id", getStaffById);
 
 export default router;

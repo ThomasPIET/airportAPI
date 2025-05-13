@@ -12,7 +12,9 @@ const router = express.Router();
 
 // Protected routes
 router.post("/", authMiddleware, createPlane);
-router.get("/", authMiddleware, getAllPlanes);
-router.get("/:id", authMiddleware, getPlaneById);
+
+// Public routes
+router.get("/", getAllPlanes);
+router.get("/:id", getPlaneById);
 
 export default router;

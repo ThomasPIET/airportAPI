@@ -5,8 +5,6 @@ import {
 } from "../services/flights.service.js";
 
 export const createFlight = async (req, res) => {
-  console.log("Creating flight");
-
   const {
     flightNumber,
     destination,
