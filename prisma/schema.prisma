@@ -97,7 +97,6 @@ model Runway {
   maintenanceTo   DateTime?
 }
 
-/// Table de liaison pour la relation plusieurs-à-plusieurs entre Flight et Staff
 model StaffFlight {
   flightId Int
   staffId  Int

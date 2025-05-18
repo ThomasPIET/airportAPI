@@ -2,6 +2,7 @@ import {
   addFlight,
   getFlights,
   flightById,
+  createBookingService,
 } from "../services/flights.service.js";
 
 export const createFlight = async (req, res) => {
@@ -87,3 +88,32 @@ export const getFlightById = async (req, res) => {
     });
   }
 };
+
+export const createBooking = async (req, res) => {
+    const { id } = req.params;
+    const { passengerId, seatNumber } = req.body;
+
+    if (!id || !passengerId || !seatNumber) {
+        return res.status(400).json({
+            message: "Missing required fields",
+        });
+    }
+
+    try {
+        const booking = await createBookingService(
+            parseInt(id),
+            parseInt(passengerId),
+            seatNumber
+        );
+
+        res.status(201).json({
+            message: "Booking created successfully",
+            booking,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Error creating booking",
+            error: error.message,
+        });
+    }
+}

@@ -167,7 +167,7 @@ components:
       required:
         - flightId
         - passengerId
-        - seat
+        - seatNumber
       properties:
         id:
           type: integer
@@ -175,7 +175,7 @@ components:
           type: integer
         passengerId:
           type: integer
-        seat:
+        seaNumber:
           type: string
           example: 12A
     Runway:
@@ -511,11 +511,11 @@ paths:
               type: object
               required:
                 - passengerId
-                - seat
+                - seatNumber
               properties:
                 passengerId:
                   type: integer
-                seat:
+                seatNumber:
                   type: string
       responses:
         '201':

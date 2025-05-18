@@ -52,3 +52,30 @@ export const flightById = async (id) => {
     },
   });
 };
+
+export const createBookingService = async (flightId, passengerId, seatNumber) => {
+    const flight = await flightById(flightId);
+
+    if (!flight) throw new Error("Flight not found");
+    if (flight.capacity <= 0) throw new Error("Flight is fully booked");
+
+    try {
+        return await prisma.booking.create({
+            data: {
+                flight: {
+                    connect: {
+                        id: parseInt(flightId),
+                    },
+                },
+                passenger: {
+                    connect: {
+                        id: parseInt(passengerId),
+                    }
+                },
+                seat: seatNumber
+            },
+        });
+    } catch (error) {
+        throw new Error("Error creating booking");
+    }
+}
